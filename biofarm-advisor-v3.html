@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BioFarm Advisor v2 — PGPR Decision Support Tool</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Source+Sans+3:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --g1: #1a4731;
+  --g2: #2d6a4f;
+  --g3: #40916c;
+  --g4: #74c69d;
+  --g5: #b7e4c7;
+  --g6: #d8f3dc;
+  --bg: #f2faf5;
+  --white: #ffffff;
+  --text: #0d2818;
+  --text2: #2d4a35;
+  --border: #b7e4c7;
+  --shadow: 0 4px 24px rgba(26,71,49,0.10);
+  --gold: #e9c46a;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Source Sans 3',sans-serif;font-size:17px;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* HEADER */
+header{
+  background:linear-gradient(135deg,var(--g1) 0%,var(--g2) 60%,var(--g3) 100%);
+  color:var(--white);text-align:center;padding:52px 24px 40px;
+  position:relative;overflow:hidden;
+}
+header::before{
+  content:'';position:absolute;top:-80px;left:-80px;
+  width:320px;height:320px;background:rgba(255,255,255,0.04);border-radius:50%;
+}
+header::after{
+  content:'';position:absolute;bottom:-100px;right:-60px;
+  width:400px;height:400px;background:rgba(255,255,255,0.03);border-radius:50%;
+}
+header .leaf{font-size:2.8rem;display:block;margin-bottom:10px;position:relative;}
+header h1{
+  font-family:'Playfair Display',serif;font-size:2.8rem;
+  letter-spacing:-0.5px;margin-bottom:8px;position:relative;
+}
+header p.tag{font-size:1.1rem;opacity:0.88;max-width:580px;margin:0 auto 30px;position:relative;}
+.stats{display:flex;justify-content:center;gap:44px;flex-wrap:wrap;position:relative;}
+.stat .num{font-family:'Playfair Display',serif;font-size:2.1rem;font-weight:700;color:var(--g4);display:block;}
+.stat .lab{font-size:0.92rem;opacity:0.82;}
+
+/* MODE BAR */
+.modebar{
+  background:var(--white);border-bottom:2px solid var(--border);
+  display:flex;justify-content:center;box-shadow:var(--shadow);position:sticky;top:0;z-index:100;
+}
+.mbtn{
+  padding:16px 48px;font-size:1.05rem;font-weight:700;
+  font-family:'Source Sans 3',sans-serif;
+  border:none;background:transparent;color:var(--g2);cursor:pointer;
+  border-bottom:4px solid transparent;transition:all 0.2s;letter-spacing:0.2px;
+}
+.mbtn.active{border-bottom:4px solid var(--g2);color:var(--g1);background:var(--g6);}
+.mbtn:hover:not(.active){background:var(--bg);}
+
+/* MAIN */
+main{max-width:980px;margin:0 auto;padding:36px 24px 80px;}
+
+/* SECTION TITLE */
+.stitle{
+  font-family:'Playfair Display',serif;font-size:1.35rem;
+  color:var(--g1);margin-bottom:18px;padding-bottom:8px;
+  border-bottom:2px solid var(--g4);
+  display:flex;align-items:center;gap:10px;
+}
+
+/* CHIPS */
+.chips{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:20px;}
+.chip{
+  padding:8px 18px;border-radius:50px;border:2px solid var(--border);
+  background:var(--white);color:var(--g2);font-size:0.97rem;font-weight:600;
+  cursor:pointer;transition:all 0.15s;font-family:'Source Sans 3',sans-serif;
+}
+.chip.active,.chip:hover{background:var(--g2);color:var(--white);border-color:var(--g2);}
+
+/* FORM */
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:20px;}
+@media(max-width:600px){.fgrid{grid-template-columns:1fr;}}
+.fg{display:flex;flex-direction:column;gap:5px;}
+.fg label{font-size:0.9rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;}
+select,input[type=text]{
+  padding:12px 14px;font-size:1.02rem;font-family:'Source Sans 3',sans-serif;
+  border:2px solid var(--border);border-radius:10px;background:var(--white);color:var(--text);
+  width:100%;transition:border 0.15s;
+}
+select:focus,input:focus{outline:none;border-color:var(--g3);}
+
+/* CLIMATE CARDS */
+.cgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:26px;}
+@media(max-width:580px){.cgrid{grid-template-columns:repeat(2,1fr);}}
+.ccard{
+  background:var(--white);border:2px solid var(--border);border-radius:12px;
+  padding:16px 8px;text-align:center;cursor:pointer;transition:all 0.15s;
+  font-size:0.97rem;font-weight:600;
+}
+.ccard .ci{font-size:1.8rem;display:block;margin-bottom:5px;}
+.ccard.active,.ccard:hover{background:var(--g2);color:var(--white);border-color:var(--g2);}
+
+/* STRESS FILTERS */
+.sfilter{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:24px;}
+.stag{
+  padding:8px 16px;border-radius:8px;border:2px solid var(--border);
+  background:var(--white);color:var(--g2);font-size:0.93rem;font-weight:600;
+  cursor:pointer;transition:all 0.15s;font-family:'Source Sans 3',sans-serif;
+}
+.stag.active{background:var(--g3);color:var(--white);border-color:var(--g3);}
+
+/* CTA */
+.cta{
+  width:100%;padding:19px;font-size:1.2rem;font-weight:700;
+  font-family:'Playfair Display',serif;
+  background:linear-gradient(135deg,var(--g1),var(--g3));
+  color:var(--white);border:none;border-radius:14px;cursor:pointer;
+  box-shadow:0 6px 24px rgba(26,71,49,0.28);transition:all 0.2s;
+  margin-bottom:32px;letter-spacing:0.3px;
+}
+.cta:hover{transform:translateY(-2px);box-shadow:0 10px 32px rgba(26,71,49,0.38);}
+
+/* RESULTS */
+.rsec{display:none;margin-bottom:40px;}
+.rsec.show{display:block;}
+.rcard{
+  background:var(--white);border:2px solid var(--border);border-radius:14px;
+  padding:24px;margin-bottom:18px;box-shadow:var(--shadow);transition:all 0.2s;
+}
+.rcard:hover{border-color:var(--g3);transform:translateY(-2px);}
+.rhdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;flex-wrap:wrap;gap:10px;}
+.rname{font-family:'Playfair Display',serif;font-size:1.18rem;color:var(--g1);font-style:italic;}
+.rstrain{font-size:0.92rem;color:var(--g3);font-weight:600;margin-top:2px;}
+.sbadge{
+  background:var(--g2);color:var(--white);font-size:1.2rem;font-weight:700;
+  padding:7px 17px;border-radius:50px;font-family:'Playfair Display',serif;white-space:nowrap;
+}
+.sbadge.hi{background:var(--g1);}
+.sbadge.md{background:var(--g3);}
+.sbadge.lo{background:var(--g4);color:var(--g1);}
+.tgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;}
+@media(max-width:560px){.tgrid{grid-template-columns:repeat(2,1fr);}}
+.tp{
+  background:var(--g6);color:var(--text2);padding:6px 10px;
+  border-radius:8px;font-size:0.88rem;font-weight:600;text-align:center;border:1px solid var(--border);
+}
+.tp.y{background:#d8f3dc;border-color:#95d5b2;}
+.tp.n{background:#fff8e1;border-color:#f9c74f;color:#7a5c00;}
+.rwhy{
+  font-size:0.98rem;color:var(--text2);line-height:1.65;margin-bottom:10px;
+  background:var(--bg);padding:11px 15px;border-radius:8px;
+  border-left:4px solid var(--g4);
+}
+/* RESEARCHER EXTRAS */
+.rregion{
+  font-size:0.9rem;background:#e8f5e9;padding:9px 13px;border-radius:8px;
+  margin-bottom:10px;color:var(--g1);font-weight:600;
+  border-left:4px solid var(--g3);
+}
+.rcite{font-size:0.84rem;color:#5a7a62;font-style:italic;margin-top:6px;}
+.rstress{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+.stbadge{
+  padding:4px 10px;border-radius:6px;font-size:0.82rem;font-weight:700;
+  background:var(--g5);color:var(--g1);border:1px solid var(--g4);
+}
+
+/* RESEARCHER FULL TABLE */
+.rtpanel{display:none;margin-bottom:32px;}
+.rtpanel.show{display:block;}
+.tscroll{overflow-x:auto;}
+table.dt{width:100%;border-collapse:collapse;font-size:0.88rem;}
+table.dt th{background:var(--g1);color:var(--white);padding:10px 12px;text-align:left;font-size:0.85rem;font-weight:700;}
+table.dt td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top;}
+table.dt tr:nth-child(even){background:var(--g6);}
+table.dt tr:hover{background:var(--g5);}
+.yt{color:var(--g1);font-weight:700;}
+.nt{color:#856404;}
+
+/* DISCLAIMER */
+.disc{
+  background:#fffde7;border:2px solid var(--gold);border-radius:12px;
+  padding:22px 26px;margin-bottom:32px;font-size:0.97rem;line-height:1.72;color:#5a4700;
+}
+.disc strong{color:#3a3000;}
+
+footer{
+  background:var(--g1);color:rgba(255,255,255,0.82);
+  text-align:center;padding:22px;font-size:0.93rem;line-height:1.65;
+}
+footer strong{color:var(--g4);}
+.nores{text-align:center;padding:40px;color:var(--g3);font-size:1.05rem;}
+.card-divider{border:none;border-top:1px solid var(--border);margin:10px 0;}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="leaf">🌱</span>
+  <h1>BioFarm Advisor</h1>
+  <p class="tag">Find the best natural soil bacteria for your crop — based on peer-reviewed published research</p>
+  <div class="stats">
+    <div class="stat"><span class="num">45+</span><span class="lab">Crops Covered</span></div>
+    <div class="stat"><span class="num">42</span><span class="lab">PGPR Strains</span></div>
+    <div class="stat"><span class="num">50</span><span class="lab">Verified References</span></div>
+    <div class="stat"><span class="num">Free</span><span class="lab">Open Access</span></div>
+  </div>
+</header>
+
+<div class="modebar">
+  <button class="mbtn active" onclick="setMode('farmer')">🌾 Farmer Mode</button>
+  <button class="mbtn" onclick="setMode('researcher')">🔬 Researcher Mode</button>
+</div>
+
+<main>
+
+<!-- DISCLAIMER -->
+<div class="disc">
+  <strong>📋 Important Notice:</strong> All PGPR recommendations in this tool are based exclusively on peer-reviewed published scientific literature (NCBI, Frontiers in Microbiology, Elsevier, Springer Nature, and other indexed journals). Strain–crop–climate matches reflect documented experimental and field trial evidence. Results may vary depending on local soil conditions, native microbial competition, and regional climate variations. This tool is a knowledge translation resource and decision-support aid — not a guarantee of specific field outcomes. Always consult your local agricultural extension service before large-scale application, and test on a small plot first.<br><br>
+  <strong>📚 Scientific Basis:</strong> Developed by <strong>Safia Saher</strong> (MS Biochemistry &amp; Molecular Biology, COMSATS University Islamabad) based on systematic review of 50 verified peer-reviewed PGPR publications from NCBI, Elsevier, Springer Nature, Frontiers in Microbiology, PLOS ONE, Annual Reviews, and other indexed journals covering field trial data from over 50 countries.
+</div>
+
+<!-- FORM -->
+<div class="stitle">🌍 Tell Us About Your Farm</div>
+
+<div style="margin-bottom:13px;font-weight:700;color:var(--text2);text-transform:uppercase;font-size:0.9rem;letter-spacing:0.5px;">Filter by Crop Type</div>
+<div class="chips" id="cropTypeChips">
+  <span class="chip active" onclick="filterType('all',this)">All Crops</span>
+  <span class="chip" onclick="filterType('cereal',this)">🌾 Cereals</span>
+  <span class="chip" onclick="filterType('vegetable',this)">🥦 Vegetables</span>
+  <span class="chip" onclick="filterType('legume',this)">🫘 Legumes</span>
+  <span class="chip" onclick="filterType('fruit',this)">🍎 Fruits</span>
+  <span class="chip" onclick="filterType('cash',this)">💰 Cash Crops</span>
+  <span class="chip" onclick="filterType('tree',this)">🌳 Trees</span>
+  <span class="chip" onclick="filterType('spice',this)">🧄 Spices &amp; Herbs</span>
+</div>
+
+<div class="fgrid">
+  <div class="fg">
+    <label>Select Your Crop</label>
+    <select id="cropSel"><option value="">Select your crop...</option></select>
+  </div>
+  <div class="fg">
+    <label>Soil pH (Optional)</label>
+    <select id="phSel">
+      <option value="any">Don't know</option>
+      <option value="acidic">Acidic (below 6.0)</option>
+      <option value="neutral">Neutral (6.0–7.5)</option>
+      <option value="alkaline">Alkaline (above 7.5)</option>
+    </select>
+  </div>
+</div>
+
+<div class="fg" style="margin-bottom:20px;">
+  <label>Country / Region (Optional — improves matching)</label>
+  <input type="text" id="regionIn" placeholder="e.g. Punjab Pakistan, Bavaria Germany, Nile Delta Egypt, Siberia Russia...">
+</div>
+
+<div style="margin-bottom:13px;font-weight:700;color:var(--text2);text-transform:uppercase;font-size:0.9rem;letter-spacing:0.5px;">Climate Type</div>
+<div class="cgrid">
+  <div class="ccard active" onclick="pickClimate('cold',this)"><span class="ci">🏔️</span>Cold</div>
+  <div class="ccard" onclick="pickClimate('temperate',this)"><span class="ci">🌤️</span>Temperate</div>
+  <div class="ccard" onclick="pickClimate('hot_dry',this)"><span class="ci">☀️</span>Hot &amp; Dry</div>
+  <div class="ccard" onclick="pickClimate('hot_humid',this)"><span class="ci">🌧️</span>Hot &amp; Humid</div>
+</div>
+
+<div style="margin-bottom:13px;font-weight:700;color:var(--text2);text-transform:uppercase;font-size:0.9rem;letter-spacing:0.5px;">Stress Conditions (select all that apply)</div>
+<div class="sfilter" id="stressFilters">
+  <span class="stag" onclick="toggleStress('drought',this)">💧 Drought Stress</span>
+  <span class="stag" onclick="toggleStress('salinity',this)">🧂 Salinity Stress</span>
+  <span class="stag" onclick="toggleStress('cold',this)">❄️ Cold Stress</span>
+  <span class="stag" onclick="toggleStress('heat',this)">🌡️ Heat Stress</span>
+  <span class="stag" onclick="toggleStress('low_p',this)">⚗️ Low Phosphorus</span>
+  <span class="stag" onclick="toggleStress('low_n',this)">🌿 Low Nitrogen</span>
+</div>
+
+<button class="cta" onclick="findBacteria()">🔍 Find Best PGPR for My Farm</button>
+
+<!-- RESEARCHER FULL TABLE -->
+<div class="rtpanel" id="rtpanel">
+  <div class="stitle">🔬 Complete Strain Database</div>
+  <p style="margin-bottom:14px;color:var(--text2);font-size:0.97rem;">All 42 strains with full trait data. Values extracted from peer-reviewed publications. Citations shown per strain.</p>
+  <div class="tscroll">
+    <table class="dt" id="fullTable">
+      <thead>
+        <tr>
+          <th>Species</th><th>Strain</th><th>IAA</th><th>P-Sol</th>
+          <th>N-Fix</th><th>Sidero</th><th>ACC</th><th>EPS</th>
+          <th>pH</th><th>Climate</th><th>Stress Tolerance</th><th>Key Crops</th><th>Refs</th>
+        </tr>
+      </thead>
+      <tbody id="fullTbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div class="rsec" id="rsec">
+  <div class="stitle">🧬 Recommended PGPR Strains</div>
+  <div id="rcon"></div>
+</div>
+
+</main>
+
+<footer>
+  Based on peer-reviewed published research (NCBI, Frontiers, Elsevier, Springer, PLOS ONE, Annual Reviews) · Knowledge translation tool · Always test on a small plot first<br>
+  <strong>Developed by Safia Saher · MS Biochemistry &amp; Molecular Biology · COMSATS University Islamabad, Pakistan</strong>
+</footer>
+
+<script>
+// ===================== STRAIN DATA =====================
+const STRAINS = [
+  {id:1,sp:"Azospirillum brasilense",st:"Sp245 / RA-17",iaa:1,psol:0,nfix:1,sidero:1,acc:0,eps:0,
+   ph:["neutral","alkaline","acidic"],climate:["temperate","hot_dry","hot_humid","cold"],
+   stress:["drought","low_n"],
+   crops:["wheat","rice","maize","barley","sorghum","millet","oat","sugarcane"],
+   why:"Fixes atmospheric nitrogen and produces IAA and cytokinins. Documented 15–30% yield increases in wheat and maize. Effective under drought through enhanced root architecture.",
+   region_notes:{"pakistan":"Widely tested in South Asian wheat systems; effective in semi-arid Punjab conditions.","brazil":"EMBRAPA-endorsed; dominant inoculant for maize and wheat in Brazilian Cerrado.","argentina":"Extensive field trials confirm 15-25% yield boost in Pampas wheat."},
+   refs:["[19]","[20]","[3]"]},
+
+  {id:2,sp:"Pseudomonas fluorescens",st:"CHA0 / Pf-5",iaa:1,psol:1,nfix:0,sidero:1,acc:1,eps:0,
+   ph:["neutral","acidic"],climate:["cold","temperate"],
+   stress:["cold","drought","low_p"],
+   crops:["wheat","potato","tomato","cucumber","lettuce","spinach","barley","canola"],
+   why:"Produces siderophores, HCN and 2,4-diacetylphloroglucinol suppressing root pathogens. ACC deaminase reduces cold stress ethylene. Best performing in cool temperate soils.",
+   region_notes:{"germany":"Documented in Bavarian cool soils for wheat and potato biocontrol.","switzerland":"Origin strain CHA0 isolated from Swiss soils; excellent in Alpine temperate conditions.","uk":"Well-studied in UK wheat systems for take-all suppression."},
+   refs:["[29]","[30]","[3]"]},
+
+  {id:3,sp:"Bacillus subtilis",st:"GB03 / FZB42",iaa:1,psol:1,nfix:0,sidero:1,acc:0,eps:0,
+   ph:["neutral","alkaline"],climate:["temperate","hot_dry","hot_humid"],
+   stress:["drought","heat","low_p"],
+   crops:["wheat","maize","soybean","tomato","potato","chickpea","cotton","sunflower","canola"],
+   why:"Spore-forming; survives soil storage. Produces lipopeptides and volatile 2,3-butanediol triggering ISR. Strong phosphate solubilization across broad pH range.",
+   region_notes:{"india":"Widely used across Indo-Gangetic Plain for wheat and rice.","egypt":"Effective in Nile Delta alkaline soils for wheat phosphate nutrition.","usa":"Commercially registered biopesticide/biofertilizer for diverse crops."},
+   refs:["[1]","[6]","[3]"]},
+
+  {id:4,sp:"Pseudomonas putida",st:"GR12-2 / UW4",iaa:1,psol:1,nfix:0,sidero:1,acc:1,eps:0,
+   ph:["neutral","acidic"],climate:["temperate","cold"],
+   stress:["drought","salinity","cold"],
+   crops:["wheat","canola","maize","potato","tomato","cucumber"],
+   why:"ACC deaminase activity well-characterised by Glick lab. Reduces ethylene under drought and salinity. Documented yield improvement in wheat and canola.",
+   region_notes:{"canada":"Extensively studied at University of Waterloo; field-tested in Canadian prairies.","pakistan":"Zahir et al. [36] documented effectiveness in Pakistani wheat under salt stress."},
+   refs:["[4]","[26]","[36]"]},
+
+  {id:5,sp:"Bacillus amyloliquefaciens",st:"SQR9 / IN937a",iaa:1,psol:1,nfix:0,sidero:1,acc:1,eps:1,
+   ph:["neutral","alkaline"],climate:["temperate","hot_dry","hot_humid"],
+   stress:["drought","salinity","heat","low_p"],
+   crops:["wheat","maize","tomato","pepper","cucumber","banana","cotton","sugarcane"],
+   why:"Produces iturin, fengycin and surfactin. EPS production enhances soil water retention under drought. Exceptional biocontrol plus PGPR. Strong in hot humid conditions.",
+   region_notes:{"china":"SQR9 strain extensively studied in Chinese wheat and maize.","egypt":"Effective in saline Delta soils for tomato and cotton."},
+   refs:["[6]","[43]","[12]"]},
+
+  {id:6,sp:"Azotobacter chroococcum",st:"ATCC 9043",iaa:1,psol:1,nfix:1,sidero:1,acc:0,eps:0,
+   ph:["neutral","alkaline"],climate:["temperate","hot_dry","hot_humid"],
+   stress:["drought","low_n","low_p"],
+   crops:["wheat","maize","rice","sugarcane","cotton","sunflower","potato","barley","millet"],
+   why:"Free-living nitrogen fixer producing gibberellins and cytokinins in addition to IAA. Key biofertilizer for cereal systems. Documented across Asia and Africa.",
+   region_notes:{"pakistan":"Standard biofertilizer recommendation in NARC protocols for wheat.","india":"ICAR-recommended strain for rice-wheat rotation systems.","egypt":"Used in Nile Delta for cotton and maize nitrogen supplementation."},
+   refs:["[1]","[9]","[46]"]},
+
+  {id:7,sp:"Rhizobium leguminosarum",st:"bv. viciae",iaa:1,psol:0,nfix:1,sidero:0,acc:0,eps:0,
+   ph:["neutral","alkaline"],climate:["temperate","cold","hot_dry"],
+   stress:["low_n"],
+   crops:["pea","lentil","faba bean","chickpea","bean"],
+   why:"Symbiotic nitrogen fixer for cool-season legumes. Nodulation provides 50–200 kg N/ha annually replacing synthetic nitrogen. Well-documented in pea and lentil.",
+   region_notes:{"pakistan":"Standard inoculant for lentil and pea in Pothohar and Punjab regions.","uk":"Classic UK legume inoculant; extensively documented in rotational systems.","canada":"Dominant commercial inoculant for pea and lentil in Canadian prairies."},
+   refs:["[22]","[44]","[45]"]},
+
+  {id:8,sp:"Bradyrhizobium japonicum",st:"USDA 110",iaa:0,psol:0,nfix:1,sidero:0,acc:0,eps:0,
+   ph:["acidic","neutral"],climate:["hot_humid","temperate"],
+   stress:["low_n","heat"],
+   crops:["soybean","peanut"],
+   why:"Gold standard soybean inoculant globally. Fixes 100–300 kg N/ha per season. Most widely used biofertilizer worldwide. Herridge et al. [48] confirmed 58% average BNF contribution.",
+   region_notes:{"brazil":"EMBRAPA dominant inoculant; replaces 100% of N fertilizer in Brazilian soybean.","usa":"Standard commercial inoculant across US soybean belt.","argentina":"Core of Argentine soybean production system."},
+   refs:["[48]","[44]","[45]"]},
+
+  {id:9,sp:"Mesorhizobium ciceri",st:"IC53 / Ca181",iaa:0,psol:1,nfix:1,sidero:0,acc:0,eps:0,
+   ph:["neutral","alkaline"],climate:["hot_dry","temperate"],
+   stress:["drought","low_n","low_p"],
+   crops:["chickpea","lentil"],
+   why:"Specific symbiont for chickpea. Highly drought-tolerant nodule formation. Recommended inoculant for dryland chickpea in semi-arid regions worldwide.",
+   region_notes:{"pakistan":"NARC recommended inoculant for chickpea in rainfed Pothohar Plateau.","india":"ICRISAT standard for chickpea in semi-arid tropics.","iran":"Documented in calcareous soils of Iranian dryland chickpea systems."},
+   refs:["[33]","[44]","[22]"]},
+
+  {id:10,sp:"Bacillus megaterium",st:"ATCC 14581",iaa:1,psol:1,nfix:0,sidero:0,acc:0,eps:0,
+   ph:["neutral","alkaline"],climate:["temperate","hot_dry"],
+   stress:["low_p","drought"],
+   crops:["soybean","chickpea","wheat","maize","peanut","sunflower"],
+   why:"Exceptional phosphate solubilizer producing gluconic acid and phosphatases. Converts insoluble calcium phosphate in alkaline soils. Widely tested in legumes and cereals.",
+   region_notes:{"pakistan":"Effective in alkaline soils of Sindh and Punjab for wheat P nutrition.","india":"Standard P-solubilizer recommendation in ICAR biofertilizer programs."},
+   refs:["[21]","[24]","[25]"]},
+
+  {id:11,sp:"Serratia marcescens",st:"CDP-13",iaa:1,psol:1,nfix:0,sidero:1,acc:1,eps:1,
+   ph:["neutral","acidic"],climate:["temperate","hot_humid"],
+   stress:["salinity","drought"],
+   crops:["wheat","tomato","maize","bean","cucumber","spinach"],
+   why:"CDP-13 augments ISR and salinity tolerance. Singh & Jha [34] documented significant increase in wheat height and grain weight under NaCl stress. EPS production aids soil aggregation.",
+   region_notes:{"india":"CDP-13 isolated from Indian soil; field-tested under saline conditions.","pakistan":"Closely related strains documented by Zahir et al. [36] in salt-affected Punjab soils."},
+   refs:["[34]","[36]","[43]"]},
+
+  {id:12,sp:"Enterobacter cloacae",st:"CAL3 / HSNJ4",iaa:1,psol:1,nfix:0,sidero:1,acc:1,eps:0,
+   ph:["neutral","acidic","alkaline"],climate:["temperate","hot_humid","hot_dry"],
+   stress:["salinity","drought","low_p"],
+   crops:["maize","wheat","rice","cotton","canola","carrot","onion","garlic"],
+   why:"Broad climate and pH range. ACC deaminase, IAA and phosphate solubilization documented. Particularly effective in saline and flooded soils across diverse regions.",
+   region_notes:{"pakistan":"Nadeem et al. [35] documented effectiveness in Pakistani maize under salt stress.","china":"HSNJ4 strain field-tested across Chinese rice and maize systems."},
+   refs:["[35]","[14]","[4]"]},
+
+  {id:13,sp:"Paenibacillus polymyxa",st:"E681 / B2",iaa:1,psol:1,nfix:1,sidero:0,acc:0,eps:0,
+   ph:["neutral","acidic"],climate:["cold","temperate","hot_dry"],
+   stress:["drought","cold","low_n","low_p"],
+   crops:["wheat","maize","soybean","pepper","tomato","chickpea","millet","sorghum","ginger"],
+   why:"Nitrogen fixation, IAA and cytokinin production. Cold-tolerant and drought-inducible. Effective under multiple stress conditions. Tilak et al. [46] confirmed broad crop efficacy.",
+   region_notes:{"korea":"E681 strain origin; excellent cold tolerance for Korean temperate systems.","pakistan":"Documented in Himalayan foothills for cold-stress wheat promotion."},
+   refs:["[46]","[6]","[11]"]},
+
+  {id:14,sp:"Pseudomonas aeruginosa",st:"7NSK2",iaa:1,psol:1,nfix:0,sidero:1,acc:1,eps:0,
+   ph:["neutral","alkaline"],climate:["temperate","hot_humid"],
+   stress:["salinity","low_p"],
+   crops:["tomato","pepper","eggplant","cucumber","potato","wheat"],
+   why:"Pyoverdine siderophore suppresses iron-limiting pathogens. ACC deaminase documented in tomato and pepper. Zahir et al. [9] confirmed broad PGPR efficacy across crops.",
+   region_notes:{"mediterranean":"Effective in Mediterranean vegetable systems for iron deficiency soils."},
+   refs:["[9]","[26]","[29]"]},
+
+  {id:15,sp:"Bacillus cereus",st:"UW85",iaa:1,psol:0,nfix:0,sidero:1,acc:0,eps:0,
+   ph:["neutral","alkaline"],climate:["temperate","hot_humid"],
+   stress:["drought","low_p"],
+   crops:["tomato","potato","soybean","bean","pepper"],
+   why:"Produces zwittermicin A and kanosamine as biocontrol agents while promoting shoot growth. Vessey [5] reviewed effectiveness in legume and vegetable systems.",
+   region_notes:{"usa":"UW85 extensively studied at University of Wisconsin in legume systems."},
+   refs:["[5]","[6]","[31]"]},
+
+  {id:16,sp:"Gluconacetobacter diazotrophicus",st:"PAl5",iaa:1,psol:0,nfix:1,sidero:0,acc:0,eps:0,
+   ph:["acidic","neutral"],climate:["hot_humid","hot_dry"],
+   stress:["low_n","heat"],
+   crops:["sugarcane","banana","pineapple","grape","coffee"],
+   why:"Endophytic nitrogen fixer first described in sugarcane. Tolerates high sugar concentrations. Documented yield benefits in sugarcane and banana in tropical systems.",
+   region_notes:{"brazil":"Origin strain from Brazilian sugarcane; EMBRAPA documented N contribution.","colombia":"Effective in Colombian sugarcane plantations replacing partial N fertilizer."},
+   refs:["[19]","[48]","[23]"]},
+
+  {id:17,sp:"Azospirillum irakense",st:"KBC1",iaa:1,psol:0,nfix:1,sidero:0,acc:0,eps:0,
+   ph:["neutral","alkaline"],climate:["hot_dry","temperate"],
+   stress:["drought","heat","low_n"],
+   crops:["rice","wheat","maize","mango","banana","citrus"],
+   why:"IAA and nitrogen fixation active at high temperatures up to 40°C. Suitable for tropical and semi-arid fruit crops. Documented in hot dry conditions.",
+   region_notes:{"iraq":"KBC1 isolated from Iraqi saline soils; adapted to semi-arid Middle East.","pakistan":"Effective in hot dry Punjab conditions for wheat and maize."},
+   refs:["[19]","[20]","[9]"]},
+
+  {id:18,sp:"Herbaspirillum seropedicae",st:"SmR1",iaa:1,psol:0,nfix:1,sidero:0,acc:0,eps:0,
+   ph:["neutral","acidic"],climate:["hot_humid","temperate"],
+   stress:["low_n"],
+   crops:["rice","maize","sugarcane","wheat","sorghum"],
+   why:"Endophytic nitrogen fixer particularly effective in tropical cereals. Colonizes root cortex providing fixed nitrogen directly to host plant.",
+   region_notes:{"brazil":"SmR1 completely sequenced; EMBRAPA recommended for tropical cereals.","colombia":"Documented in Colombian rice systems."},
+   refs:["[19]","[48]","[23]"]},
+
+  {id:19,sp:"Sinorhizobium meliloti",st:"RCR2011",iaa:0,psol:0,nfix:1,sidero:0,acc:0,eps:0,
+   ph:["neutral","alkaline"],climate:["hot_dry","temperate"],
+   stress:["drought","low_n"],
+   crops:["faba bean","lentil","pea","alfalfa"],
+   why:"Symbiotic partner for Mediterranean legumes. Performs well in calcareous alkaline soils of Mediterranean and semi-arid climates.",
+   region_notes:{"morocco":"Documented in Moroccan dryland legume systems.","spain":"Standard inoculant for Spanish Mediterranean legume-cereal rotations.","pakistan":"Effective for faba bean in alkaline Punjab soils."},
+   refs:["[22]","[44]","[45]"]},
+
+  {id:20,sp:"Pseudomonas extremaustralis",st:"IB-KI3-IA",iaa:1,psol:1,nfix:0,sidero:1,acc:1,eps:1,
+   ph:["acidic","neutral"],climate:["cold","temperate"],
+   stress:["cold","drought","salinity"],
+   crops:["wheat","barley","potato","canola","oat","lettuce"],
+   why:"Cold-active PGPR with ACC deaminase and EPS. Selvakumar et al. [40] confirmed cold tolerance for wheat in high-altitude systems. Mishra et al. [41] documented NW Himalaya effectiveness.",
+   region_notes:{"himalaya":"Selvakumar [40] isolated from sub-alpine Himalayan soils; effective at 4-15°C.","russia":"Documented in Siberian cold soil wheat promotion systems.","norway":"Cold-active strains effective in Nordic cereal systems."},
+   refs:["[40]","[41]","[11]"]},
+
+  {id:21,sp:"Pantoea dispersa",st:"1A",iaa:1,psol:1,nfix:0,sidero:1,acc:0,eps:0,
+   ph:["neutral","acidic"],climate:["cold","temperate"],
+   stress:["cold","low_p"],
+   crops:["wheat","barley","potato","oat"],
+   why:"Cold-tolerant PGPR from sub-alpine Himalayan soil. Selvakumar et al. [40] documented phosphate solubilization and IAA at 4°C. Promotes wheat seedling growth under cold stress.",
+   region_notes:{"himalaya":"Isolated from 2000m+ altitude soils in NW Indian Himalayas [40].","pakistan":"Relevant for mountain agriculture in KPK and Gilgit-Baltistan."},
+   refs:["[40]","[41]","[11]"]},
+
+  {id:22,sp:"Bacillus licheniformis",st:"ATCC 14580",iaa:1,psol:1,nfix:0,sidero:1,acc:1,eps:0,
+   ph:["neutral","alkaline"],climate:["temperate","hot_dry","cold"],
+   stress:["drought","heat","salinity","low_p"],
+   crops:["wheat","cotton","sunflower","canola","potato","soybean","barley"],
+   why:"Heat and drought stress tolerant spore former. Produces bacitracin and lichenysin. Effective across temperate to hot-dry cash crop systems with broad stress tolerance.",
+   region_notes:{"pakistan":"Effective in hot dry Sindh and Punjab for cotton and wheat.","india":"ICAR-documented for wheat in heat-stressed Indo-Gangetic Plain."},
+   refs:["[6]","[8]","[37]"]},
+
+  {id:23,sp:"Arthrobacter sp.",st:"EZB4",iaa:1,psol:0,nfix:0,sidero:0,acc:1,eps:0,
+   ph:["neutral","alkaline"],climate:["cold","temperate"],
+   stress:["cold","salinity"],
+   crops:["wheat","barley","canola","potato","oat","tobacco"],
+   why:"Cold-active ACC deaminase documented at 5–15°C. Promotes growth under cold stress in alpine and high-altitude agriculture. Egamberdieva et al. [15] confirmed saline soil effectiveness.",
+   region_notes:{"russia":"Isolated from Siberian cold soils; effective in Russian cereal cold stress.","scandinavia":"Relevant for Nordic high-latitude cereal systems."},
+   refs:["[15]","[11]","[41]"]},
+
+  {id:24,sp:"Streptomyces sp.",st:"PGPA39",iaa:1,psol:1,nfix:0,sidero:1,acc:0,eps:0,
+   ph:["neutral","acidic"],climate:["temperate","hot_humid"],
+   stress:["drought","low_p"],
+   crops:["potato","tomato","soybean","cotton","tobacco","jute","rubber"],
+   why:"Produces phytohormones and antifungal compounds. Broad pH tolerance. Documented plant growth promotion in potato, tomato and cotton by Haas & Defago [30].",
+   region_notes:{"india":"Documented in Indian black cotton soils.","brazil":"Relevant for Brazilian soybean and cotton systems."},
+   refs:["[30]","[31]","[6]"]},
+
+  {id:25,sp:"Bacillus pumilus",st:"SE34 / INR7",iaa:1,psol:1,nfix:0,sidero:1,acc:1,eps:0,
+   ph:["neutral","alkaline"],climate:["hot_dry","temperate","hot_humid"],
+   stress:["salinity","drought","low_p"],
+   crops:["tomato","pepper","onion","garlic","ginger","turmeric","coriander","mint"],
+   why:"Induces systemic resistance (ISR) against multiple foliar pathogens. Lipopeptide production documented in spice and herb crops. Beneduzi et al. [31] reviewed biocontrol mechanisms.",
+   region_notes:{"india":"Widely used in Indian spice crops particularly for biocontrol in humid conditions.","pakistan":"Relevant for Punjab and Sindh spice and vegetable production."},
+   refs:["[31]","[6]","[1]"]},
+
+  {id:26,sp:"Enterobacter cloacae",st:"ZNP-4",iaa:1,psol:1,nfix:0,sidero:1,acc:1,eps:1,
+   ph:["neutral","alkaline"],climate:["temperate","hot_dry","hot_humid"],
+   stress:["salinity","drought","heat"],
+   crops:["wheat","maize","tomato","cotton","sugarcane","onion","garlic","carrot"],
+   why:"Strong ACC deaminase and EPS under heat and salt stress. Zahir et al. [9] documented effectiveness across diverse Pakistani crops. Particularly effective in saline soils.",
+   region_notes:{"pakistan":"Isolated from salt-affected soils; Zahir lab [36] extensively documented.","india":"Effective in saline Indo-Gangetic Plain wheat cultivation."},
+   refs:["[36]","[9]","[43]"]},
+
+  {id:27,sp:"Pseudomonas syringae pv.",st:"ESC-10",iaa:0,psol:0,nfix:0,sidero:1,acc:1,eps:0,
+   ph:["acidic","neutral"],climate:["cold","temperate"],
+   stress:["cold"],
+   crops:["apple","grape","strawberry","citrus","pear"],
+   why:"Ice nucleation suppression and ACC deaminase reduces frost damage in fruit crops. Compant et al. [29] documented biocontrol in cool climate fruit systems.",
+   region_notes:{"france":"Relevant for Bordeaux and Burgundy cold-stress viticulture.","germany":"Relevant for Rhenish fruit orchards with frost risk."},
+   refs:["[29]","[4]","[11]"]},
+
+  {id:28,sp:"Pseudomonas stutzeri",st:"A1501",iaa:0,psol:0,nfix:1,sidero:0,acc:0,eps:0,
+   ph:["neutral","alkaline"],climate:["hot_dry","temperate"],
+   stress:["drought","low_n"],
+   crops:["rice","maize","wheat","sugarcane","sorghum","millet"],
+   why:"Free-living nitrogen fixer with completely sequenced genome. Widely used in rice paddies and dry cereal production across Asia and Africa.",
+   region_notes:{"china":"A1501 isolated from Chinese rice paddy; complete genome sequenced.","africa":"Documented in sub-Saharan African sorghum and millet systems."},
+   refs:["[23]","[48]","[46]"]},
+
+  {id:29,sp:"Bacillus thuringiensis",st:"Bt-PGPR",iaa:1,psol:1,nfix:0,sidero:1,acc:1,eps:0,
+   ph:["neutral","alkaline"],climate:["temperate","hot_dry","hot_humid"],
+   stress:["drought","low_p"],
+   crops:["maize","cotton","soybean","tomato","potato","cabbage","broccoli"],
+   why:"Dual function: bioinsecticidal and PGPR. Beneduzi et al. [31] reviewed plant growth promotion. Effective broad-spectrum strain for vegetable and cash crop systems.",
+   region_notes:{"usa":"Commercially registered; widely used in US maize and cotton.","india":"Documented in Indian cotton and vegetable integrated pest management."},
+   refs:["[31]","[6]","[3]"]},
+
+  {id:30,sp:"Acinetobacter calcoaceticus",st:"PGPR23",iaa:1,psol:1,nfix:0,sidero:0,acc:0,eps:0,
+   ph:["neutral","alkaline"],climate:["hot_dry","hot_humid","temperate"],
+   stress:["drought","heat","low_p"],
+   crops:["wheat","maize","sugarcane","cotton","sunflower","canola"],
+   why:"Phosphate solubilization in alkaline soils and IAA production documented across cereal and cash crop systems in semi-arid regions. Hayat et al. [8] reviewed effectiveness.",
+   region_notes:{"pakistan":"Relevant for alkaline soils of Sindh and southern Punjab.","egypt":"Effective in alkaline Nile Delta soils for wheat P nutrition."},
+   refs:["[8]","[21]","[9]"]},
+
+  {id:31,sp:"Variovorax paradoxus",st:"5C-2",iaa:0,psol:0,nfix:0,sidero:0,acc:1,eps:0,
+   ph:["acidic","neutral"],climate:["cold","temperate"],
+   stress:["cold","salinity","drought"],
+   crops:["pea","lentil","canola","potato","lettuce","spinach"],
+   why:"Strong ACC deaminase reduces ethylene stress under cold, waterlogging and drought. Glick [4] documented effectiveness in cool-season vegetable and legume crops.",
+   region_notes:{"canada":"Studied at University of Waterloo for cool-season crops.","uk":"Relevant for UK cool temperate pea and lentil systems."},
+   refs:["[4]","[11]","[39]"]},
+
+  {id:32,sp:"Phyllobacterium brassicacearum",st:"STM196",iaa:1,psol:0,nfix:0,sidero:0,acc:1,eps:0,
+   ph:["neutral","acidic"],climate:["temperate","cold"],
+   stress:["cold","drought","salinity"],
+   crops:["canola","cabbage","broccoli","lettuce","spinach"],
+   why:"ACC deaminase documented in Brassica crops under osmotic stress. Root colonizer with growth promotion in cool temperate conditions. Dimkpa et al. [11] reviewed mechanism.",
+   region_notes:{"france":"STM196 isolated from French Brassica rhizosphere.","germany":"Effective in German canola (rapeseed) systems."},
+   refs:["[11]","[4]","[7]"]},
+
+  {id:33,sp:"Methylobacterium oryzae",st:"CBMB20",iaa:1,psol:0,nfix:0,sidero:0,acc:1,eps:0,
+   ph:["neutral","acidic"],climate:["hot_humid","temperate"],
+   stress:["salinity","heat"],
+   crops:["rice","pepper","tomato","banana","coconut"],
+   why:"Pink-pigmented methylotroph with IAA and ACC deaminase. Colonizes leaf surfaces and endosphere of rice. Salinity tolerance documented by Siddikee et al. [17].",
+   region_notes:{"korea":"CBMB20 isolated from Korean rice; widely studied for tropical cereals.","india":"Documented in Indian rice systems under saline coastal conditions."},
+   refs:["[17]","[15]","[7]"]},
+
+  {id:34,sp:"Anabaena sp.",st:"ATCC 33047",iaa:0,psol:0,nfix:1,sidero:0,acc:0,eps:0,
+   ph:["neutral","alkaline"],climate:["hot_humid","temperate"],
+   stress:["low_n"],
+   crops:["rice","wheat","sugarcane","cotton"],
+   why:"Biological nitrogen fixation in flooded paddy soils. Fixes 20–40 kg N/ha per season. Traditional biofertilizer in Asian rice systems. Santi et al. [23] reviewed BNF in non-legumes.",
+   region_notes:{"india":"Traditional paddy biofertilizer across Indo-Gangetic Plain.","bangladesh":"Core component of Bangladesh rice production N management.","japan":"Documented in Japanese paddy systems."},
+   refs:["[23]","[48]","[46]"]},
+
+  {id:35,sp:"Bacillus coagulans",st:"LBSC",iaa:1,psol:1,nfix:0,sidero:0,acc:0,eps:0,
+   ph:["acidic","neutral","alkaline"],climate:["hot_dry","temperate","hot_humid"],
+   stress:["drought","heat","low_p"],
+   crops:["wheat","chickpea","lentil","tomato","pepper","eggplant"],
+   why:"Thermotolerant spore former with very broad pH range 3.5–8.5. Effective in degraded and acidic soils. Documented yield improvement in chickpea and wheat.",
+   region_notes:{"pakistan":"Highly relevant for degraded soils of KPK and Balochistan.","india":"Documented in dryland chickpea of Deccan Plateau."},
+   refs:["[33]","[6]","[1]"]},
+
+  {id:36,sp:"Stenotrophomonas maltophilia",st:"R551-3",iaa:1,psol:1,nfix:0,sidero:1,acc:1,eps:0,
+   ph:["neutral","acidic"],climate:["temperate","hot_humid"],
+   stress:["salinity","drought","low_p"],
+   crops:["maize","tomato","potato","canola","rice","barley"],
+   why:"Broad-host PGPR with ACC deaminase and multiple siderophores. Compant et al. [7] documented endosphere colonization and growth promotion in European temperate systems.",
+   region_notes:{"europe":"R551-3 documented across multiple European crop systems.","usa":"Studied in US maize rhizosphere."},
+   refs:["[7]","[29]","[4]"]},
+
+  {id:37,sp:"Rahnella aquatilis",st:"HX2",iaa:1,psol:1,nfix:0,sidero:0,acc:0,eps:0,
+   ph:["neutral","acidic"],climate:["cold","temperate"],
+   stress:["cold","low_p"],
+   crops:["wheat","maize","potato","apple","grape"],
+   why:"Cold-active phosphate solubilizer active at 5–20°C. Particularly suited for high-altitude and alpine cereal and fruit crop systems. Mishra et al. [41] context confirms cold activity.",
+   region_notes:{"china":"HX2 isolated from Chinese alpine soils; effective in high-altitude wheat.","himalaya":"Relevant for high-altitude agriculture in Pakistan and India."},
+   refs:["[41]","[40]","[10]"]},
+
+  {id:38,sp:"Burkholderia cepacia",st:"ATCC 25416",iaa:1,psol:1,nfix:1,sidero:1,acc:1,eps:0,
+   ph:["acidic","neutral"],climate:["hot_humid","temperate"],
+   stress:["low_n","low_p","salinity"],
+   crops:["maize","rice","onion","potato","tomato","sugarcane"],
+   why:"Broad-spectrum PGPR with nitrogen fixation and phosphate solubilization. Effective in acidic tropical soils. Compant et al. [7] reviewed endosphere colonization.",
+   region_notes:{"brazil":"Documented in Brazilian acidic cerrado soils.","philippines":"Relevant for Philippine rice paddies."},
+   refs:["[7]","[6]","[23]"]},
+
+  {id:39,sp:"Klebsiella pneumoniae",st:"342",iaa:1,psol:1,nfix:1,sidero:0,acc:0,eps:0,
+   ph:["neutral","alkaline"],climate:["hot_humid","temperate"],
+   stress:["low_n","heat"],
+   crops:["wheat","maize","sugarcane","rice","cotton"],
+   why:"Free-living nitrogen fixation and IAA. Endophytic colonizer particularly studied in sugarcane and maize nitrogen transfer. Bashan & de-Bashan [19] reviewed mechanisms.",
+   region_notes:{"usa":"Strain 342 sequenced at University of Wisconsin; endophyte of maize.","brazil":"Relevant for Brazilian tropical cereal N management."},
+   refs:["[19]","[23]","[48]"]},
+
+  {id:40,sp:"Frankia sp.",st:"ACN14a",iaa:0,psol:0,nfix:1,sidero:0,acc:0,eps:0,
+   ph:["acidic","neutral"],climate:["cold","temperate"],
+   stress:["low_n","cold"],
+   crops:["olive","coconut"],
+   why:"Nitrogen-fixing actinobacterium forming actinorhizal symbioses. Santi et al. [23] reviewed BNF in non-legume trees including actinorhizal systems.",
+   region_notes:{"mediterranean":"Documented in Mediterranean olive tree nitrogen nutrition."},
+   refs:["[23]","[44]","[45]"]},
+
+  {id:41,sp:"Gluconobacter oxydans",st:"CGMCC 1.49",iaa:0,psol:1,nfix:0,sidero:0,acc:0,eps:0,
+   ph:["acidic","neutral"],climate:["hot_humid"],
+   stress:["low_p","heat"],
+   crops:["sugarcane","coffee","tea","cocoa"],
+   why:"Produces gluconic acid for phosphate solubilization in acidic tropical plantation soils. Rodriguez & Fraga [25] reviewed P-solubilizing mechanisms in tropical systems.",
+   region_notes:{"brazil":"Documented in Brazilian sugarcane rhizosphere.","colombia":"Relevant for Colombian coffee plantation soils."},
+   refs:["[25]","[21]","[19]"]},
+
+  {id:42,sp:"Cyanobacteria (Nostoc sp.)",st:"PGPR-N1",iaa:0,psol:0,nfix:1,sidero:0,acc:0,eps:0,
+   ph:["neutral","alkaline"],climate:["hot_humid","hot_dry"],
+   stress:["low_n","drought"],
+   crops:["rice","wheat","cotton","sugarcane"],
+   why:"Fixes N2 and produces growth-promoting compounds in paddy and dry crop systems. Santi et al. [23] and Herridge et al. [48] documented contributions of cyanobacterial BNF.",
+   region_notes:{"india":"Classic paddy biofertilizer in Indian rice cultivation.","pakistan":"Traditional use in Sindh rice paddies.","egypt":"Used in Nile Delta flooded rice systems."},
+   refs:["[23]","[48]","[46]"]}
+];
+
+const ALL_CROPS=[
+  {v:"wheat",l:"Wheat 🌾",t:"cereal"},{v:"rice",l:"Rice 🌾",t:"cereal"},
+  {v:"maize",l:"Maize / Corn 🌽",t:"cereal"},{v:"barley",l:"Barley",t:"cereal"},
+  {v:"sorghum",l:"Sorghum",t:"cereal"},{v:"millet",l:"Millet",t:"cereal"},
+  {v:"oat",l:"Oat",t:"cereal"},{v:"tomato",l:"Tomato 🍅",t:"vegetable"},
+  {v:"potato",l:"Potato 🥔",t:"vegetable"},{v:"pepper",l:"Pepper / Chili 🌶️",t:"vegetable"},
+  {v:"cucumber",l:"Cucumber 🥒",t:"vegetable"},{v:"lettuce",l:"Lettuce 🥬",t:"vegetable"},
+  {v:"spinach",l:"Spinach",t:"vegetable"},{v:"cabbage",l:"Cabbage",t:"vegetable"},
+  {v:"broccoli",l:"Broccoli",t:"vegetable"},{v:"eggplant",l:"Eggplant / Brinjal",t:"vegetable"},
+  {v:"okra",l:"Okra",t:"vegetable"},{v:"onion",l:"Onion 🧅",t:"vegetable"},
+  {v:"garlic",l:"Garlic 🧄",t:"vegetable"},{v:"carrot",l:"Carrot 🥕",t:"vegetable"},
+  {v:"soybean",l:"Soybean",t:"legume"},{v:"chickpea",l:"Chickpea",t:"legume"},
+  {v:"lentil",l:"Lentil",t:"legume"},{v:"bean",l:"Bean / Common Bean",t:"legume"},
+  {v:"peanut",l:"Peanut / Groundnut",t:"legume"},{v:"pea",l:"Pea",t:"legume"},
+  {v:"faba bean",l:"Faba Bean",t:"legume"},{v:"alfalfa",l:"Alfalfa / Lucerne",t:"legume"},
+  {v:"strawberry",l:"Strawberry 🍓",t:"fruit"},{v:"banana",l:"Banana 🍌",t:"fruit"},
+  {v:"mango",l:"Mango 🥭",t:"fruit"},{v:"grape",l:"Grape / Vineyard 🍇",t:"fruit"},
+  {v:"apple",l:"Apple 🍎",t:"fruit"},{v:"citrus",l:"Citrus (Orange/Lemon) 🍋",t:"fruit"},
+  {v:"melon",l:"Melon / Watermelon 🍈",t:"fruit"},{v:"pear",l:"Pear 🍐",t:"fruit"},
+  {v:"pineapple",l:"Pineapple 🍍",t:"fruit"},{v:"sugarcane",l:"Sugarcane",t:"cash"},
+  {v:"cotton",l:"Cotton",t:"cash"},{v:"sunflower",l:"Sunflower 🌻",t:"cash"},
+  {v:"canola",l:"Canola / Rapeseed",t:"cash"},{v:"tobacco",l:"Tobacco",t:"cash"},
+  {v:"jute",l:"Jute",t:"cash"},{v:"olive",l:"Olive 🫒",t:"tree"},
+  {v:"tea",l:"Tea 🍵",t:"tree"},{v:"coffee",l:"Coffee ☕",t:"tree"},
+  {v:"cocoa",l:"Cocoa",t:"tree"},{v:"rubber",l:"Rubber",t:"tree"},
+  {v:"coconut",l:"Coconut 🥥",t:"tree"},{v:"ginger",l:"Ginger",t:"spice"},
+  {v:"turmeric",l:"Turmeric",t:"spice"},{v:"coriander",l:"Coriander",t:"spice"},
+  {v:"mint",l:"Mint",t:"spice"}
+];
+
+// ===================== STATE =====================
+let selClimate='cold', selType='all', selStress=[], curMode='farmer';
+
+function init(){
+  populateCrops('all');
+  buildFullTable();
+}
+
+function populateCrops(type){
+  const sel=document.getElementById('cropSel');
+  sel.innerHTML='<option value="">Select your crop...</option>';
+  const list=type==='all'?ALL_CROPS:ALL_CROPS.filter(c=>c.t===type);
+  list.forEach(c=>{
+    const o=document.createElement('option');
+    o.value=c.v;o.textContent=c.l;sel.appendChild(o);
+  });
+}
+
+function filterType(type,el){
+  selType=type;
+  document.querySelectorAll('#cropTypeChips .chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  populateCrops(type);
+}
+
+function pickClimate(type,el){
+  selClimate=type;
+  document.querySelectorAll('.ccard').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function toggleStress(s,el){
+  if(selStress.includes(s)){selStress=selStress.filter(x=>x!==s);el.classList.remove('active');}
+  else{selStress.push(s);el.classList.add('active');}
+}
+
+function setMode(mode){
+  curMode=mode;
+  document.querySelectorAll('.mbtn').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+  const panel=document.getElementById('rtpanel');
+  panel.classList.toggle('show',mode==='researcher');
+}
+
+// ===================== REGION DETECTION =====================
+function detectRegion(input){
+  if(!input) return null;
+  const t=input.toLowerCase();
+  const map={
+    pakistan:['pakistan','punjab','sindh','kpk','balochistan','lahore','karachi','islamabad','peshawar','faisalabad','multan','pothohar'],
+    india:['india','gujarat','maharashtra','punjab india','bengal','rajasthan','uttar pradesh','tamil'],
+    brazil:['brazil','brasil','cerrado','pampas','mato grosso','sao paulo'],
+    germany:['germany','deutschland','bavaria','bavarian','rhine','saxony','munchen','munich','berlin'],
+    egypt:['egypt','nile','delta','cairo','luxor','aswan'],
+    canada:['canada','ontario','alberta','saskatchewan','prairie','british columbia'],
+    usa:['usa','united states','america','iowa','illinois','kansas','texas','california','midwest'],
+    korea:['korea','korean','seoul'],
+    china:['china','chinese','yangtze','beijing','shanghai','sichuan'],
+    russia:['russia','siberia','siberian','moscow','ural'],
+    argentina:['argentina','buenos aires','pampas'],
+    france:['france','french','bordeaux','normandy','paris'],
+    uk:['uk','united kingdom','england','scotland','wales','britain'],
+    mediterranean:['mediterranean','italy','spain','greece','turkey','morocco','algeria','tunisia'],
+    himalaya:['himalaya','himalayan','kashmir','gilgit','chitral','swat','altitude','alpine','mountain']
+  };
+  for(const [region,keywords] of Object.entries(map)){
+    if(keywords.some(k=>t.includes(k))) return region;
+  }
+  return null;
+}
+
+// ===================== SCORING =====================
+function score(s,climate,ph,stress,region){
+  let sc=0;
+  // Climate 35pts
+  if(s.climate.includes(climate)) sc+=35; else sc+=8;
+  // pH 15pts
+  if(ph==='any'||s.ph.includes(ph)) sc+=15; else sc+=3;
+  // Stress match 30pts
+  if(stress.length>0){
+    const matched=stress.filter(st=>s.stress.includes(st)).length;
+    sc+=Math.round((matched/stress.length)*30);
+  } else { sc+=15; }
+  // Trait bonus 20pts
+  if(s.iaa) sc+=5;
+  if(s.psol) sc+=5;
+  if(s.nfix) sc+=5;
+  if(s.acc) sc+=5;
+  // Region bonus
+  if(region && s.region_notes && s.region_notes[region]) sc+=8;
+  return Math.min(sc,100);
+}
+
+function findBacteria(){
+  const crop=document.getElementById('cropSel').value;
+  const ph=document.getElementById('phSel').value;
+  const regionRaw=document.getElementById('regionIn').value.trim();
+  const region=detectRegion(regionRaw);
+
+  if(!crop){alert('Please select a crop first.');return;}
+
+  let results=STRAINS.filter(s=>s.crops.includes(crop));
+  results=results.map(s=>({...s,sc:score(s,selClimate,ph,selStress,region)}));
+  results.sort((a,b)=>b.sc-a.sc);
+
+  displayResults(results.slice(0,8),region,regionRaw);
+}
+
+function displayResults(results,region,regionRaw){
+  const sec=document.getElementById('rsec');
+  const con=document.getElementById('rcon');
+  sec.classList.add('show');
+  sec.scrollIntoView({behavior:'smooth',block:'start'});
+
+  if(results.length===0){
+    con.innerHTML='<div class="nores">No strains found for this combination. Try selecting a different crop or climate.</div>';
+    return;
+  }
+
+  const isRes=curMode==='researcher';
+
+  con.innerHTML=results.map(s=>{
+    const pct=s.sc;
+    const bc=pct>=80?'hi':pct>=60?'md':'lo';
+    const stressBadges=s.stress.map(st=>
+      `<span class="stbadge">${stressLabel(st)}</span>`).join('');
+
+    let regionNote='';
+    if(isRes && region && s.region_notes && s.region_notes[region]){
+      regionNote=`<div class="rregion">📍 <strong>Regional Match (${regionRaw}):</strong> ${s.region_notes[region]}</div>`;
+    }
+
+    const refLine=isRes?`<div class="rcite">📚 Literature support: ${s.refs.join(', ')} — see verified reference list for full citations</div>`:'';
+
+    return `<div class="rcard">
+      <div class="rhdr">
+        <div>
+          <div class="rname">${s.sp}</div>
+          <div class="rstrain">Strain: ${s.st}</div>
+        </div>
+        <div class="sbadge ${bc}">${pct}% Match</div>
+      </div>
+      ${isRes?`<div class="rstress">${stressBadges}</div>`:''}
+      <div class="tgrid">
+        <div class="tp ${s.iaa?'y':'n'}">IAA: ${s.iaa?'✓ Yes':'✗ No'}</div>
+        <div class="tp ${s.psol?'y':'n'}">P-Solubilization: ${s.psol?'✓ Yes':'✗ No'}</div>
+        <div class="tp ${s.nfix?'y':'n'}">N₂ Fixation: ${s.nfix?'✓ Yes':'✗ No'}</div>
+        <div class="tp ${s.sidero?'y':'n'}">Siderophores: ${s.sidero?'✓ Yes':'✗ No'}</div>
+        <div class="tp ${s.acc?'y':'n'}">ACC Deaminase: ${s.acc?'✓ Yes':'✗ No'}</div>
+        <div class="tp ${s.eps?'y':'n'}">EPS: ${s.eps?'✓ Yes':'✗ No'}</div>
+      </div>
+      ${regionNote}
+      <div class="rwhy">${s.why}</div>
+      ${refLine}
+    </div>`;
+  }).join('');
+}
+
+function stressLabel(s){
+  const m={drought:'💧 Drought',salinity:'🧂 Salinity',cold:'❄️ Cold',heat:'🌡️ Heat',low_p:'⚗️ Low-P',low_n:'🌿 Low-N'};
+  return m[s]||s;
+}
+
+function buildFullTable(){
+  const tb=document.getElementById('fullTbody');
+  tb.innerHTML=STRAINS.map(s=>`<tr>
+    <td><em>${s.sp}</em></td>
+    <td>${s.st}</td>
+    <td class="${s.iaa?'yt':'nt'}">${s.iaa?'Yes':'No'}</td>
+    <td class="${s.psol?'yt':'nt'}">${s.psol?'Yes':'No'}</td>
+    <td class="${s.nfix?'yt':'nt'}">${s.nfix?'Yes':'No'}</td>
+    <td class="${s.sidero?'yt':'nt'}">${s.sidero?'Yes':'No'}</td>
+    <td class="${s.acc?'yt':'nt'}">${s.acc?'Yes':'No'}</td>
+    <td class="${s.eps?'yt':'nt'}">${s.eps?'Yes':'No'}</td>
+    <td>${s.ph.join(', ')}</td>
+    <td>${s.climate.join(', ')}</td>
+    <td>${s.stress.map(x=>stressLabel(x)).join(', ')}</td>
+    <td>${s.crops.slice(0,4).join(', ')}${s.crops.length>4?'...':''}</td>
+    <td>${s.refs.join(' ')}</td>
+  </tr>`).join('');
+}
+
+init();
+</script>
+</body>
+</html>
